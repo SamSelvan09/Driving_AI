@@ -97,7 +97,7 @@ Always be helpful, knowledgeable, and safety-conscious."""
 
 
 async def get_ai_response(message: str, session_id: str, driving_status: str = "parked") -> str:
-    """Get AI response using emergentintegrations LlmChat"""
+    """Get AI response using emergentintegrations LlmChat with fallback"""
     try:
         # Initialize chat with car-focused system prompt
         system_prompt = get_car_assistant_prompt(driving_status)
@@ -117,7 +117,116 @@ async def get_ai_response(message: str, session_id: str, driving_status: str = "
         
     except Exception as e:
         logging.error(f"AI response error: {str(e)}")
+        
+        # Check if it's a quota/billing error and provide more specific guidance
+        if "quota" in str(e).lower() or "billing" in str(e).lower():
+            return get_fallback_response(message, driving_status)
+        
         return "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment."
+
+
+def get_fallback_response(message: str, driving_status: str = "parked") -> str:
+    """Provide intelligent fallback responses when AI is unavailable"""
+    message_lower = message.lower()
+    
+    # Cold weather checks
+    if any(word in message_lower for word in ["cold", "winter", "morning", "start"]):
+        return f"""For cold weather starting (Current status: {driving_status}):
+
+🔧 **Pre-Start Checks:**
+• Check tire pressure (cold weather reduces pressure)
+• Ensure battery connections are clean and tight
+• Verify coolant levels aren't frozen
+• Check oil viscosity (use winter-grade oil if needed)
+
+⚡ **Starting Tips:**
+• Turn off all accessories before starting
+• Let the engine warm up for 30-60 seconds before driving
+• Don't rev the engine while cold
+• Check that lights and defrosters work properly
+
+💡 **Performance Tip for {driving_status.replace('_', ' ').title()}:**
+{get_status_specific_tip(driving_status)}
+
+*Note: AI service temporarily unavailable - using expert-curated responses*"""
+
+    # Maintenance questions
+    elif any(word in message_lower for word in ["maintenance", "service", "check", "schedule"]):
+        return f"""**Regular Maintenance Schedule:**
+
+🔧 **Every Month:**
+• Check tire pressure and tread depth
+• Inspect lights, wipers, and fluid levels
+• Test battery connections
+
+🛠️ **Every 3,000-5,000 miles:**
+• Oil and filter change
+• Check belts and hoses
+• Inspect brake pads
+
+📅 **Every 6 months:**
+• Rotate tires
+• Check alignment
+• Replace air filter
+
+**Current Status Consideration ({driving_status.replace('_', ' ').title()}):**
+{get_status_specific_tip(driving_status)}
+
+*Note: AI service temporarily unavailable - using expert-curated responses*"""
+
+    # Performance optimization
+    elif any(word in message_lower for word in ["performance", "optimize", "fuel", "efficiency", "mpg"]):
+        return f"""**Performance Optimization Tips:**
+
+⚡ **Fuel Efficiency:**
+• Maintain steady speeds (use cruise control on highway)
+• Keep tires properly inflated
+• Remove excess weight from vehicle
+• Regular engine tune-ups
+
+🏎️ **Engine Performance:**
+• Use recommended octane fuel
+• Replace air filter regularly
+• Keep fuel injectors clean
+• Monitor engine oil quality
+
+**For {driving_status.replace('_', ' ').title()} Status:**
+{get_status_specific_tip(driving_status)}
+
+*Note: AI service temporarily unavailable - using expert-curated responses*"""
+
+    # General car questions
+    else:
+        return f"""**General Car Care Advice:**
+
+🚗 **Daily Checks:**
+• Monitor dashboard warning lights
+• Check that all lights function properly
+• Ensure adequate fuel levels
+• Listen for unusual noises
+
+🔧 **Weekly Checks:**
+• Tire pressure and visual inspection
+• Fluid levels (oil, coolant, washer fluid)
+• Battery terminals for corrosion
+
+**Context for {driving_status.replace('_', ' ').title()}:**
+{get_status_specific_tip(driving_status)}
+
+For specific questions about your vehicle, consult your owner's manual or a certified mechanic.
+
+*Note: AI service temporarily unavailable - using expert-curated responses*"""
+
+
+def get_status_specific_tip(driving_status: str) -> str:
+    """Get driving status specific tips"""
+    tips = {
+        "parked": "Perfect time for maintenance checks and planning your next service!",
+        "city_driving": "Use gentle acceleration/braking to improve fuel economy in stop-and-go traffic.",
+        "highway": "Maintain steady speeds and use cruise control for optimal fuel efficiency.",
+        "traffic": "Turn off A/C if overheating in traffic, and avoid excessive idling to save fuel."
+    }
+    return tips.get(driving_status, "Safe driving is the best performance optimization!")
 
 
 # Add your routes to the router instead of directly to app
